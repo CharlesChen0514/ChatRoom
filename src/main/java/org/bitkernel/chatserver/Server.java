@@ -14,10 +14,13 @@ public class Server {
     public static void main(String[] args) {
         try (DatagramSocket socket = new DatagramSocket(UDP_PORT)) {
             byte[] buffer = new byte[1024];
-            DatagramPacket packet = new DatagramPacket(buffer, 0, buffer.length);
-            socket.receive(packet);
-            System.out.println(packet.getAddress().getHostAddress());
-            System.out.println(new String(packet.getData(), 0, packet.getLength()));
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(buffer, 0, buffer.length);
+                socket.receive(packet);
+//                System.out.println(packet.getAddress().getHostAddress());
+                String msg = new String(packet.getData(), 0, packet.getLength());
+                System.out.println(msg);
+            }
         } catch (Exception e) {
             logger.error("{}", e.getMessage());
         }
