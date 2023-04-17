@@ -19,7 +19,7 @@ public class Server {
                 socket.receive(packet);
 //                System.out.println(packet.getAddress().getHostAddress());
                 String msg = new String(packet.getData(), 0, packet.getLength());
-                System.out.println(msg);
+                logger.info(msg);
             }
         } catch (Exception e) {
             logger.error("{}", e.getMessage());

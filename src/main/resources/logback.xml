@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <timestamp key="LOG_TIME" datePattern="yyyyMMdd.HHmmss"/>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${user.dir}/log/${LOG_TIME}.log</file>
+        <encoder>
+            <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="debug">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>
