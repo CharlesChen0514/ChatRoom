@@ -12,7 +12,7 @@
     <timestamp key="LOG_TIME" datePattern="yyyyMMdd.HHmmss"/>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>${user.dir}/log/${LOG_TIME}.log</file>
+        <file>${user.dir}/log/server.log</file>
         <encoder>
             <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
         </encoder>

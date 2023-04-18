@@ -3,10 +3,10 @@ package org.bitkernel.chatserver;
 import com.sun.istack.internal.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +37,7 @@ public class Server {
 
     public void start() {
         try {
+            logger.info("Server started successfully");
             while (true) {
                 Socket socket = serverSocket.accept();
                 logger.info("A new client connect {}", socket.getInetAddress());
@@ -53,51 +54,42 @@ public class Server {
     }
 
     class ClientHandler implements Runnable {
-        private Socket socket;
         private User user;
-        private PrintWriter pw;
-        private BufferedReader br;
-
+        private TcpServer tcpServer;
 
         public ClientHandler(@NotNull Socket socket) {
-            try {
-                this.socket = socket;
-                OutputStream out = socket.getOutputStream();
-                OutputStreamWriter osw = new OutputStreamWriter(out, StandardCharsets.UTF_8);
-                pw = new PrintWriter(osw, true);
-                outStreamSet.add(pw);
-
-                InputStream in = socket.getInputStream();
-                InputStreamReader isr = new InputStreamReader(in, StandardCharsets.UTF_8);
-                br = new BufferedReader(isr);
-            } catch (IOException e) {
-                logger.error(e.getMessage());
-            }
+            tcpServer = new TcpServer(socket);
+            outStreamSet.add(tcpServer.getPw());
         }
 
         private void login() throws IOException {
-            String name = br.readLine();
-            String passwd = br.readLine();
+            String name = tcpServer.getBr().readLine();
+            String passwd = tcpServer.getBr().readLine();
             user = new User(name, passwd);
-            logger.info("User [{}{}] is online",
-                    user.getName(), socket.getInetAddress());
+            logger.info("User [{}{}] is online", user.getName(),
+                    tcpServer.getSocket().getInetAddress());
             broadcast(String.format("%s is online", user.getName()));
+        }
+
+        private void close() {
+            broadcast(String.format("%s is offline", user.getName()));
+            outStreamSet.remove(tcpServer.getPw());
+            try {
+                tcpServer.getSocket().close();
+            } catch (IOException e) {
+                logger.error(e.getMessage());
+            }
         }
 
         @Override
         public void run() {
             try {
                 login();
+
             } catch (IOException e) {
                 logger.error(e.getMessage());
             } finally {
-                outStreamSet.remove(pw);
-                broadcast(String.format("%s is offline", user.getName()));
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    logger.error(e.getMessage());
-                }
+                close();
             }
         }
     }
