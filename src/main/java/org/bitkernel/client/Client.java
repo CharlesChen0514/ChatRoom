@@ -107,4 +107,12 @@ public class Client {
         boolean udp = UdpClient.testServer();
         return tcp && udp;
     }
+
+    class TcpListener implements Runnable {
+
+        @Override
+        public void run() {
+
+        }
+    }
 }
