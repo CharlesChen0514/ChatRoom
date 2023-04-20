@@ -17,15 +17,18 @@ public enum ChatType {
     UDP_BROADCAST(5, "udp broadcast"),
     TCP_BROADCAST(6, "tcp broadcast"),
     FILE_TRANSFER(7, "file transfer"),
-    EXIT(8, "exit");
-    public int type;
-    public String description;
+    EXIT(8, "exit"),
+    NEW_USER(9, "");
+    public final int type;
+    public final String description;
+
     @NotNull
     public String toString() {
         return String.format("%d) %s", type, description);
     }
-    public static Map<Integer, ChatType> typeToEnumMap;
-    public static Set<ChatType> menu;
+
+    public static final Map<Integer, ChatType> typeToEnumMap;
+    public static final Set<ChatType> menu;
 
     static {
         typeToEnumMap = new LinkedHashMap<>();

@@ -8,6 +8,7 @@ import java.net.SocketException;
 @Slf4j
 public class UdpServer extends Udp {
     public static final int PORT = 9090;
+//    public static final SocketAddress serverSocketAddr;
 
     public UdpServer() {
         try {

@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.bitkernel.common.ChatType.typeToEnumMap;
+import static org.bitkernel.common.ChatType.*;
 
 @Slf4j
 public class Server {
@@ -26,15 +26,18 @@ public class Server {
     private final ExecutorService threadPool = Executors.newFixedThreadPool(MAX_THREAD);
     private ServerSocket serverSocket;
     private final Map<User, Tcp> tcpConnMap = new LinkedHashMap<>();
-    private final Map<User, SocketAddress> udpAddressMap = new LinkedHashMap<>();
+    private final Map<User, SocketAddress> udpSocAddrMap = new LinkedHashMap<>();
+    private final Map<User, String> udpAddrMap = new LinkedHashMap<>();
+
     private final UdpServer udpServer = new UdpServer();
     public static final InetAddress ip;
 
-    public static final User user;
+    public static final User sys;
+    private boolean isRunning = true;
 
     static {
         try {
-            user = new User("Server", "Server");
+            sys = new User("Server", "Server");
             ip = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
@@ -63,12 +66,20 @@ public class Server {
         return sb.toString();
     }
 
+    @NotNull
+    private String collectUdpOnlineUsers() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("Total %d online users: ", udpSocAddrMap.size()));
+        udpSocAddrMap.keySet().forEach(n -> sb.append(n).append(", "));
+        return sb.toString();
+    }
+
     class TcpListener implements Runnable {
         @Override
         public void run() {
             logger.info("Tcp listener started successfully");
             try {
-                while (true) {
+                while (isRunning) {
                     Socket socket = serverSocket.accept();
                     Tcp tcpServer = new Tcp(socket);
                     String string = tcpServer.getBr().readLine();
@@ -93,11 +104,11 @@ public class Server {
         @Override
         public void run() {
             logger.info("UDP listener started successfully");
-            while (true) {
+            while (isRunning) {
                 try {
                     DatagramPacket pkt = udpServer.receivePacket();
                     Data data = JsonUtil.parseData(new String(pkt.getData()));
-                    response(pkt.getSocketAddress(), data);
+                    response(pkt, data);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -123,27 +134,44 @@ public class Server {
         String str = user.getName() + ":" + msg;
         Data data = new Data(user, str);
         String json = JSONObject.toJSONString(data);
-        udpAddressMap.values().forEach(addr -> udpServer.send(addr, json));
+        udpSocAddrMap.values().forEach(addr -> udpServer.send(addr, json));
     }
 
-    private void response(@NotNull SocketAddress addr,
+    private void response(@NotNull DatagramPacket pkt,
                           @NotNull Data data) {
         ChatType type = typeToEnumMap.get(data.getType());
         Tcp tcpServer = tcpConnMap.get(data.getUser());
+//        SocketAddress udpAddr = udpAddressMap.get(data.getUser().getName());
 //        System.out.println(type);
+        SocketAddress pktAddr = pkt.getSocketAddress();
         switch (type) {
             case HEART_BEAT:
-                udpServer.heartBeating(addr);
+                udpServer.heartBeating(pktAddr);
                 break;
             case LOGIN:
-                udpAddressMap.put(data.getUser(), addr);
-                logger.debug("New udp client registered: {}{}", data.getUser().getName(), addr);
+                String addrStr = pkt.getAddress().getHostAddress() + ":" + pkt.getPort();
+                Data loginData = new Data(NEW_USER.type, data.getUser(), addrStr);
+
+                udpSocAddrMap.values().forEach(addr -> udpServer.send(addr, JSONObject.toJSONString(loginData)));
+
+                udpAddrMap.forEach((u, loc) -> {
+                    Data d = new Data(NEW_USER.type, u, loc);
+                    udpServer.send(pktAddr, JSONObject.toJSONString(d));
+                });
+                udpSocAddrMap.put(data.getUser(), pktAddr);
+                udpAddrMap.put(data.getUser(), addrStr);
+                logger.debug("New udp client registered: {}{}", data.getUser().getName(), pktAddr);
                 break;
             case UDP_ONLINE_USERS:
+                String udpUsers = collectUdpOnlineUsers();
+                Data rsp = new Data(UDP_ONLINE_USERS.type, sys, udpUsers);
+                udpServer.send(pktAddr, JSONObject.toJSONString(rsp));
+                logger.info(udpUsers);
+                break;
             case TCP_ONLINE_USERS:
-                String users = collectTcpOnlineUsers();
-                tcpServer.send(users);
-                logger.info(users);
+                String tcpUser = collectTcpOnlineUsers();
+                tcpServer.send(tcpUser);
+                logger.info(tcpUser);
                 break;
             case UDP_PRIVATE_MSG:
             case TCP_PRIVATE_MSG:
@@ -166,7 +194,9 @@ public class Server {
         Tcp tcp = tcpConnMap.get(user);
         tcp.close();
         tcpConnMap.remove(user);
-        udpAddressMap.remove(user);
-        tcpBroadcast("server", user.getName() + " offline");
+        udpSocAddrMap.remove(user);
+        String msg = user.getName() + " offline";
+        tcpBroadcast("server", msg);
+        logger.info(msg);
     }
 }

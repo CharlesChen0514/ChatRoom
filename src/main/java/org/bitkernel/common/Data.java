@@ -11,8 +11,6 @@ public class Data {
     @Getter
     private User user;
     @Getter
-    private User toUser;
-    @Getter
     private String msg;
 
     public Data(int type, @NotNull User user) {
@@ -25,12 +23,12 @@ public class Data {
         this.msg = msg;
     }
 
-    public Data(int type, @NotNull User user, @NotNull String msg) {
-        this(type, user);
-        this.msg = msg;
-    }
-
     public Data() {
         type = -1;
+    }
+
+    @NotNull
+    public String say() {
+        return user.getName() + msg;
     }
 }

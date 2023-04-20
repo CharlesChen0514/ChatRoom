@@ -6,9 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.bitkernel.common.Data;
 import org.bitkernel.server.Server;
 
-import java.net.DatagramSocket;
-import java.net.SocketAddress;
-import java.net.SocketException;
+import java.io.IOException;
+import java.net.*;
 
 @Slf4j
 public class UdpClient extends Udp {
@@ -17,9 +16,9 @@ public class UdpClient extends Udp {
     public UdpClient(@NotNull Data data) {
         try {
             socket = new DatagramSocket();
-            socket.connect(Server.ip, UdpServer.PORT);
+//            socket.connect(Server.ip, UdpServer.PORT);
             socket.setSoTimeout(UdpClient.TIME_OUT);
-            this.send(JSONObject.toJSONString(data));
+            this.sendServer(JSONObject.toJSONString(data));
             logger.debug("Successfully registered to UDP server: {}:{}",
                     Server.ip, UdpServer.PORT);
         } catch (SocketException e) {
@@ -34,5 +33,31 @@ public class UdpClient extends Udp {
     public void send(@NotNull String msg) {
         SocketAddress addr = socket.getRemoteSocketAddress();
         send(addr, msg);
+    }
+
+    public void sendServer(@NotNull String msg) {
+        byte[] bytes = msg.getBytes();
+        DatagramPacket pkt = new DatagramPacket(bytes, bytes.length, Server.ip, UdpServer.PORT);
+        try {
+            socket.send(pkt);
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    public void sendDataToServer(@NotNull Data data) {
+        sendServer(JSONObject.toJSONString(data));
+    }
+
+    public void sendDataTo(@NotNull Data data, @NotNull String ip, int port) {
+        String msg = JSONObject.toJSONString(data);
+        byte[] bytes = msg.getBytes();
+        try {
+            InetAddress addr = InetAddress.getByAddress(ip.getBytes());
+            DatagramPacket pkt = new DatagramPacket(bytes, bytes.length, addr, port);
+            socket.send(pkt);
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
     }
 }

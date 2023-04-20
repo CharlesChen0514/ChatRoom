@@ -75,6 +75,11 @@ public class Udp {
         }
     }
 
+    public void sendData(@NotNull SocketAddress addr,
+                         @NotNull Data data) {
+        send(addr, JSONObject.toJSONString(data));
+    }
+
     public void heartBeating(@NotNull SocketAddress addr) {
         send(addr, "{}");
         logger.info("{} test udp server port", addr);
