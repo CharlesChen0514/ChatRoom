@@ -2,24 +2,47 @@
 <configuration>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
             <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <timestamp key="LOG_TIME" datePattern="yyyyMMdd.HHmmss"/>
-
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <appender name="SERVER_FILE" class="ch.qos.logback.core.FileAppender">
         <file>${user.dir}/log/server.log</file>
         <encoder>
             <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <root level="debug">
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${user.dir}/log/log.log</file>
+        <encoder>
+            <pattern>[%date{yyyy-MM-dd HH:mm:ss.SSS}] [%logger{36}:%line] [%-5level] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.bitkernel.server" level="debug">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="FILE" />
-    </root>
+    </logger>
+
+    <logger name="org.bitkernel.client" level="debug">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.bitkernel.common" level="debug">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.bitkernel.tcp" level="debug">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.bitkernel.udp" level="debug">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
 </configuration>

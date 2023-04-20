@@ -1,4 +1,4 @@
-package org.bitkernel.chatserver;
+package org.bitkernel.common;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.AllArgsConstructor;
@@ -19,5 +19,15 @@ public class User {
         json.put("name", name);
         json.put("passwd", passwd);
         return json.toJSONString();
+    }
+
+    @Override
+    public int hashCode() {
+        return toString().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof User && this.toString().equals(obj.toString());
     }
 }
