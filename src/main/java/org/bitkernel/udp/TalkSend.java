@@ -2,20 +2,26 @@ package org.bitkernel.udp;
 
 import com.sun.istack.internal.NotNull;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
 
+@Slf4j
 public class TalkSend implements Runnable {
     @Getter
     private DatagramSocket send;
     private BufferedReader br;
-    private String toIp;
-    private int toPort;
+    private final String toIp;
+    private final int toPort;
     private boolean isRunning = true;
-    private InetSocketAddress toAddr;
+    private final InetSocketAddress toAddr;
+
     public TalkSend(int port, @NotNull String toIp, int toPort) {
         this.toIp = toIp;
         this.toPort = toPort;
@@ -41,6 +47,7 @@ public class TalkSend implements Runnable {
         DatagramPacket packet = new DatagramPacket(bytes, bytes.length, toAddr);
         try {
             send.send(packet);
+            logger.debug("UDP send message [{}] to {}", msg, toAddr);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -58,7 +65,7 @@ public class TalkSend implements Runnable {
             try {
                 String data = br.readLine();
                 send(data);
-                if(data.equals("bye")) {
+                if (data.equals("bye")) {
                     break;
                 }
             } catch (IOException e) {

@@ -8,13 +8,20 @@ import java.util.Map;
 import java.util.Set;
 
 public enum ChatType {
+    START("-s", "start client", "-s@chen@7788@7799"),
     ONLINE_USERS("-ol", "online users", "-ol"),
     PRIVATE_MSG("-pm", "private message", "-pm@chen@hello"),
-    FILE_TRANSFER("-f", "file transfer", "-f@"),
-    EXIT("-q", "exit", "-q");
+    FILE_TRANSFER("-f", "file transfer", "-f@chen@file"),
+    ACCEPTED_FILES("-af", "accepted file list", "-af"),
+    EXIT("-q", "exit", "-q"),
+    START_LISTEN("-sl", "start listen", "-sl"),
+    SOUT("-sout", "output", "-sout@content"),
+    HELP("-h", "command prompt", "-h"),
+    NEW_CHANNEL("-nc", "New channel", "-nc@content");
     public final String cmd;
     public final String description;
     public final String example;
+    public final static String sym = "@";
 
     @NotNull
     public String toString() {
@@ -34,6 +41,8 @@ public enum ChatType {
         menu.add(ONLINE_USERS);
         menu.add(PRIVATE_MSG);
         menu.add(FILE_TRANSFER);
+        menu.add(ACCEPTED_FILES);
+        menu.add(HELP);
         menu.add(EXIT);
     }
 

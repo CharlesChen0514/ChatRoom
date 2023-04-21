@@ -12,7 +12,7 @@ import java.net.SocketException;
 public class TalkReceive implements Runnable {
     private DatagramSocket receive;
     private static final int MAX_LEN = 4096;
-    private byte[] buff = new byte[MAX_LEN];
+    private final byte[] buff = new byte[MAX_LEN];
     private int port;
     private boolean isRunning = true;
 
