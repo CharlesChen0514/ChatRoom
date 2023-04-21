@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 
 public enum ChatType {
-    START("-s", "start client", "-s@chen@7788@7799"),
     ONLINE_USERS("-ol", "online users", "-ol"),
     PRIVATE_MSG("-pm", "private message", "-pm@chen@hello"),
     FILE_TRANSFER("-f", "file transfer", "-f@chen@file"),
