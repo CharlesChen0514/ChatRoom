@@ -4,6 +4,7 @@ import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.bitkernel.server.Server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,10 +31,10 @@ public class Tcp {
         }
     }
 
-    public void startReceiver() {
-        Thread t1 = new Thread(new Receiver());
-        t1.start();
-        logger.info("Start tcp receiver");
+    public Tcp() throws IOException {
+        this(new Socket(Server.ip, Server.TCP_LISTEN_PORT));
+        logger.debug("Successfully connected to TCP server: {}:{}",
+                Server.ip, Server.TCP_LISTEN_PORT);
     }
 
     public void send(@NotNull String msg) {
@@ -50,30 +51,16 @@ public class Tcp {
         }
     }
 
-    class Receiver implements Runnable {
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    String msg = br.readLine();
-                    if (msg != null) {
-                        System.out.println(msg);
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+    @NotNull
+    public String receive() {
+        try {
+            String msg = br.readLine();
+            if (msg != null) {
+                return msg;
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        return null;
     }
-
-//    class Writer implements Runnable {
-//        @Override
-//        public void run() {
-//            try  {
-//
-//            } catch (IOException e) {
-//                logger.error(e.getMessage());
-//            }
-//        }
-//    }
 }

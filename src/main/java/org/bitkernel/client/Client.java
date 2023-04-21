@@ -1,34 +1,31 @@
 package org.bitkernel.client;
 
-import com.alibaba.fastjson.JSONObject;
 import com.sun.istack.internal.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.bitkernel.common.ChatType;
-import org.bitkernel.common.Data;
-import org.bitkernel.common.JsonUtil;
 import org.bitkernel.common.User;
-import org.bitkernel.tcp.TcpClient;
-import org.bitkernel.udp.UdpClient;
+import org.bitkernel.server.Server;
+import org.bitkernel.tcp.Tcp;
+import org.bitkernel.udp.TalkReceive;
+import org.bitkernel.udp.TalkSend;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.SocketAddress;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.bitkernel.common.ChatType.*;
+import static org.bitkernel.common.ChatType.menu;
 
 @Slf4j
 public class Client {
     private final Scanner sc = new Scanner(System.in);
-    private TcpClient tcpClient;
-    private UdpClient udpClient;
+    private Tcp serverTcp;
+    private TalkReceive talkReceive;
+    private TalkSend sendServer;
+    private ConcurrentHashMap<String, TalkSend> sendMap = new ConcurrentHashMap<>();
     private User user;
     private boolean isRunning = true;
-    private final ChannelMap channelMap = new ChannelMap();
-    private final Map<String, String> ipMap = new ConcurrentHashMap<>();
-    private final Map<String, Integer> portMap = new ConcurrentHashMap<>();
+    private static final int MAX_SIZE = 100;
 
     public static void main(String[] args) {
         System.out.println("Welcome to the chat room");
@@ -38,127 +35,183 @@ public class Client {
     }
 
     private void login() {
-        if (!testServer()) {
-            System.out.println("Server is unavailable, please ensure the server is started");
-            System.exit(-1);
-        }
-        System.out.print("Please input username：");
-        String name = sc.nextLine();
-        user = new User(name, name);
-        Data data = new Data(LOGIN.type, user);
-        connectServer(data);
-        start();
-    }
-
-    private void connectServer(@NotNull Data data) {
+        System.out.println("Welcome to chat room, please login");
+        System.out.print("Input username: ");
+        String name = sc.next();
+        System.out.print("UDP send port: ");
+        int sendPort = sc.nextInt();
+        System.out.print("UDP receiver port: ");
+        int receivePort = sc.nextInt();
+        user = new User(name, Server.ip, receivePort, sendPort);
         try {
-            tcpClient = new TcpClient(data.getUser());
-            udpClient = new UdpClient(data);
-            return;
+            serverTcp = new Tcp();
+            serverTcp.send(user.toString());
+            talkReceive = new TalkReceive(user.getReceivePort());
+            sendServer = new TalkSend(user.getSendPort(), Server.ip, Server.UDP_RECEIVE_PORT);
+            Thread t1 = new Thread(new TcpProcessor());
+            t1.start();
+            Thread t2 = new Thread(new UdpProcessor());
+            t2.start();
         } catch (IOException e) {
             logger.error(e.getMessage());
         }
-        logger.error("User {} login failed", data.getUser());
-        System.out.println("User login failed");
-    }
-
-    private void start() {
-        isRunning = true;
-        Thread t1 = new Thread(new UdpListener());
-        t1.start();
     }
 
     private void chatGuide() {
-        System.out.println("Function menu:");
+        System.out.println("Command guide:");
         menu.forEach(System.out::println);
+        sc.nextLine();
         while (isRunning) {
-            int code = sc.nextInt();
-            ChatType type = ChatType.typeToEnumMap.get(code);
-            System.out.println("Select: " + type.description);
-            Data data = new Data();
+            String cmdLine = sc.nextLine();
+            if (cmdLine.isEmpty()) {
+                System.out.println("Command error, please re-entered");
+                continue;
+            }
+            String[] args = cmdLine.split("@");
+            ChatType type = ChatType.typeToEnumMap.get(args[0].trim());
+            if (type == null) {
+                System.out.println("Command error, please re-entered");
+                continue;
+            }
+            String pktStr = user.getName() + "@" + cmdLine;
             switch (type) {
-                case UDP_ONLINE_USERS:
-                    data = new Data(UDP_ONLINE_USERS.type, user);
+                case ONLINE_USERS:
+                    sendServer.send(pktStr);
                     break;
-                case TCP_ONLINE_USERS:
-                    data = new Data(TCP_ONLINE_USERS.type, user);
+                case PRIVATE_MSG:
+                    pm(pktStr);
                     break;
-                case UDP_PRIVATE_MSG:
-                    break;
-                case TCP_PRIVATE_MSG:
-                case UDP_BROADCAST:
-                    System.out.println("Input information to broadcast:");
-                    sc.nextLine();
-                    String msg = sc.nextLine();
-                    data = new Data(UDP_BROADCAST.type, user, msg);
-                    break;
-                case TCP_BROADCAST:
                 case FILE_TRANSFER:
                 case EXIT:
-                    data = new Data(EXIT.type, user);
-                    isRunning = false;
+                    sendServer.send(pktStr);
+                    System.exit(-1);
                     break;
                 default:
                     System.out.println("Invalid selection, please re-enter");
             }
-            udpClient.sendServer(JSONObject.toJSONString(data));
         }
         logger.info("Exit chat menu");
     }
 
-    private static boolean testServer() {
-        boolean tcp = TcpClient.testConnection();
-        boolean udp = UdpClient.testServer();
-        return tcp && udp;
-    }
-
-    class TcpListener implements Runnable {
-
-        @Override
-        public void run() {
-
+    private void pm(@NotNull String pktStr) {
+        String[] args = pktStr.split("@");
+        if (args.length != 4) {
+            System.out.println("Command error, please re-entered");
+            return;
+        }
+        String fromName = args[0].trim();
+        String toUser = args[2].trim();
+        String msg = args[3].trim();
+        String pmStr = fromName + ": " + msg;
+        if (sendMap.get(toUser) != null) {
+            TalkSend send = sendMap.get(toUser);
+            send.send(pmStr);
+        } else {
+            sendServer.send(pktStr);
         }
     }
 
-    class UdpListener implements Runnable {
+    private void close() {
+        isRunning = false;
+        talkReceive.close();
+        serverTcp.close();
+        sendServer.close();
+    }
+
+    class UdpProcessor implements Runnable {
+
         @Override
         public void run() {
-            logger.info("UDP listener started successfully");
+            logger.info("UDP processor started successfully");
             while (isRunning) {
-                try {
-                    DatagramPacket pkt = udpClient.receivePacket();
-                    Data data = JsonUtil.parseData(new String(pkt.getData()));
-                    response(pkt.getSocketAddress(), data);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                DatagramPacket pkt = talkReceive.receivePkt();
+                String msg = talkReceive.pktToString(pkt);
+                rsp(pkt, msg);
+            }
+        }
+
+        private void rsp(@NotNull DatagramPacket pkt, @NotNull String msg) {
+            String[] split = msg.split("@");
+            if (split.length < 2) {
+                System.out.println(msg);
+                return;
+            }
+            ChatType type = ChatType.typeToEnumMap.get(split[1].trim());
+            if (type == null) {
+                System.out.println(msg);
+                return;
+            }
+            switch (type) {
+                case PRIVATE_MSG:
+                    newChannel(msg);
+                    break;
+                case FILE_TRANSFER:
+                case EXIT:
+                    break;
+                default:
+                    System.out.println(msg);
             }
         }
     }
 
-    private void response(@NotNull SocketAddress addr,
-                          @NotNull Data data) {
-        ChatType type = typeToEnumMap.get(data.getType());
-        switch (type) {
-            case HEART_BEAT:
-                udpClient.heartBeating(addr);
-                break;
-            case UDP_PRIVATE_MSG:
-                System.out.println(data.say());
-                break;
-            case FILE_TRANSFER:
-            case EXIT:
-            case NEW_USER:
-                String[] split = data.getMsg().split(":");
-                int port = Integer.parseInt(split[1]);
-                String ip = split[0];
-                String name = data.getUser().getName();
-                ipMap.put(name, ip);
-                portMap.put(name, port);
-                logger.debug("New user: {}:{}", name, data.getMsg());
-                break;
-            default:
-                System.out.println("Invalid type, please check");
+    private void newChannel(@NotNull String pktStr) {
+        // lele@-upm@chen@hello@chen@ip@rPort@sPort
+        int validLen = 8;
+        String[] split = pktStr.split("@");
+        if (split.length != validLen) {
+            System.out.println("Command error, please re-entered");
+            return;
+        }
+        String from = split[0].trim();
+        String toName = split[2].trim();
+        String msg = split[3].trim();
+        String ip = split[5].trim();
+        String pmStr = from + ": " + msg;
+        int rPort = Integer.parseInt(split[6]);
+//        int sPort = Integer.parseInt(split[7]);
+        TalkSend send = new TalkSend(sendServer.getSend(), ip, rPort);
+        if (sendMap.size() >= MAX_SIZE) {
+            logger.debug("Exceed MAX Size");
+        } else {
+            sendMap.put(toName, send);
+            send.send(pmStr);
+        }
+    }
+
+    private void putChannel(@NotNull String name, @NotNull TalkSend send) {
+        if (sendMap.size() >= MAX_SIZE) {
+
+        }
+    }
+
+    class TcpProcessor implements Runnable {
+
+        @Override
+        public void run() {
+            logger.info("TCP processor started successfully");
+            while (isRunning) {
+                String msg = serverTcp.receive();
+                if (msg == null) {
+                    continue;
+                }
+                rsp(msg);
+            }
+        }
+
+        private void rsp(@NotNull String msg) {
+            String[] split = msg.split("@");
+            ChatType type = ChatType.typeToEnumMap.get(split[0].trim());
+            if (type == null) {
+                System.out.println(msg);
+                return;
+            }
+            switch (type) {
+                case FILE_TRANSFER:
+                case EXIT:
+                    break;
+                default:
+                    System.out.println(msg);
+            }
         }
     }
 }

@@ -1,33 +1,31 @@
 package org.bitkernel.common;
 
-import com.alibaba.fastjson.JSONObject;
+import com.sun.istack.internal.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @AllArgsConstructor
 public class User {
     @Getter
     private String name;
     @Getter
-    private String passwd;
+    private String ip;
+    @Getter
+    private int receivePort;
+    @Getter
+    private int sendPort;
 
-    @Override
+    @NotNull
     public String toString() {
-        JSONObject json = new JSONObject();
-        json.put("name", name);
-        json.put("passwd", passwd);
-        return json.toJSONString();
+        return name + "@" + ip + "@" + receivePort + "@" + sendPort;
     }
 
-    @Override
-    public int hashCode() {
-        return toString().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof User && this.toString().equals(obj.toString());
+    public static User parse(@NotNull String str) {
+        String[] split = str.split("@");
+        String name = split[0].trim();
+        String ip = split[1].trim();
+        int receivePort = Integer.parseInt(split[2].trim());
+        int sendPort = Integer.parseInt(split[3].trim());
+        return new User(name, ip, receivePort, sendPort);
     }
 }
