@@ -1,6 +1,29 @@
 # 聊天室说明
 
-### 聊天室采用 C/S 架构：
+[toc]
+
+## 题目要求
+
+本项目是基于 Tcp/Udp 的网络通信项目，其设计要求如下：
+
+1.采用 Java 语言开发
+2.可以和指定用户聊天：不超过 100 个用户
+3.可以和指定用户上传、下载文件，可以多个文件、多用户间并行传输，有开始、结束时间、耗时统计，打印关键日志
+4.独立双通道机制：命令交互使用 UDP，文件传输使用 TCP，相互不能阻塞，能启动、取消下载
+5.需要考虑弱网环境：即 UDP 丢包，TCP 慢等情况
+
+限制要求：
+
+1. 使用 Java 的基本 socket 类，不要使用 Netty 等 socket 框架，采用下面 2 种：
+   - TCP:java.net.Socket
+   - UDP:java.net.DatagramSocket
+2. 检测对方离线：上线、离线打印关键日志
+
+本项目基本满足以上要求
+
+## 架构
+
+聊天室采用 C/S 架构：
 
 - 服务器：
   - TCP 监听用户连接：用户登录以后与服务器连接，保持登录状态
@@ -14,7 +37,7 @@
   - 查看命令提示：`-h`
   - 退出：`-q`
 
-### 实现原理
+## 实现原理
 
 用户登录：
 
@@ -60,7 +83,7 @@
 - 收到反馈说明用户在线
 - 反之将其连接清除
 
-### 命令字说明
+## 命令字说明
 
 总共包含 9 个命令：
 
@@ -76,22 +99,56 @@ HELP("-h", "command prompt", "-h"),   // 命令提示
 NEW_CHANNEL("-nc", "New channel", "-nc@content");   // 创建新的聊天通道
 ```
 
-### 功能展示
+## 功能展示
 
-服务器启动：
+### 服务器启动
 
 ![StartServer.png](fig/StartServer.png)
 
-客户端登录：
+### 客户端登录
 
-查看在线用户：
+目前没有对用户名进行重名限制，所以在测试过程中需要注意不要输入相同的名字。
 
-私聊用户：
+端口有进行检测，一旦发现端口不可用会重新输入。
 
-文件传输：
+![StartServer.png](fig/clientLogin.png)
 
-查看接收文件：
+### 查看在线用户
 
-查看命令提示：
+![StartServer.png](fig/onlineUsers.png)
 
-退出：
+### 私聊用户
+
+发送方：
+
+![StartServer.png](fig/pmTest1.png)
+
+接收方：
+
+![StartServer.png](fig/pmTest2.png)
+
+### 文件传输
+
+发送方：展示传送文件名、文件大小、起始时间和消耗时间
+
+![StartServer.png](fig/transferTest1.png)
+
+接收方：展示接收文件名，文件大小，存储位置，起始时间和文件消耗
+
+![StartServer.png](fig/transferTest2.png)
+
+### 查看接收文件
+
+本命令是查看其用户目录下的文件，即接收的文件
+
+![StartServer.png](fig/acceptedFile.png)
+
+### 查看命令提示
+
+![StartServer.png](fig/help.png)
+
+### 退出
+
+由于服务器有心跳检测，所以不管是什么形式的退出，服务器都可以感知
+
+![StartServer.png](fig/quit.png)
