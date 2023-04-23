@@ -70,6 +70,8 @@ NEW_CHANNEL("-nc", "New channel", "-nc@content");   // 创建新的聊天通道
 
 服务器启动：
 
+![image](https://github.com/CharlesChen0514/ChatRoom/blob/main/fig/StartServer.png)
+
 客户端登录：
 
 查看在线用户：
